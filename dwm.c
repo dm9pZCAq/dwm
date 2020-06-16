@@ -148,6 +148,7 @@ static void arrange(Monitor *m);
 static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachstack(Client *c);
+static void autostart_exec(void);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
 static void cleanup(void);
@@ -274,6 +275,9 @@ static Window root, wmcheckwin;
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
+
+/* dwm will keep pid's of processes from autostart array and kill them at quit */
+static pid_t autostart_pids[LENGTH(autostart)];
 
 /* function implementations */
 void
@@ -412,6 +416,21 @@ attachstack(Client *c)
 {
 	c->snext = c->mon->stack;
 	c->mon->stack = c;
+}
+
+static void
+autostart_exec(void) {
+	char **cmd;
+	unsigned int i;
+
+	for (i = 0; i < LENGTH(autostart); i -=(~0L)) {
+		cmd = (char **)autostart[i];
+		autostart_pids[i] = fork();
+		if (autostart_pids[i] == 0) {
+			setsid();
+			execvp(cmd[0], cmd);
+		}
+	}
 }
 
 void
@@ -1249,6 +1268,14 @@ propertynotify(XEvent *e)
 void
 quit(const Arg *arg)
 {
+	unsigned int i;
+
+	for (i = 0; i < LENGTH(autostart); i++)  /* term child processes */
+		kill(autostart_pids[i], SIGTERM);
+
+	for (i = 0; i < LENGTH(autostart); i++)  /* kill child processes */
+		if (!waitpid(autostart_pids[i], NULL, WNOHANG))
+			kill(autostart_pids[i], SIGKILL);
 	running = 0;
 }
 
@@ -2145,6 +2172,7 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
+	autostart_exec();
 	run();
 	cleanup();
 	XCloseDisplay(dpy);
