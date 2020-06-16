@@ -234,6 +234,8 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void dwindle(Monitor *m);
+static void spiral(Monitor *m);
 
 /* variables */
 static const char broken[] = "broken";
@@ -2150,3 +2152,67 @@ main(int argc, char *argv[])
 	XCloseDisplay(dpy);
 	return EXIT_SUCCESS;
 }
+
+static inline void
+fibonacci(Monitor *m, char s)
+{
+	unsigned int i, n, nx, ny, nw, nh;
+	Client *c;
+
+	for(n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
+	if(n == 0)
+		return;
+
+	ny = 0;
+	nx = m->wx;
+	nw = m->ww;
+	nh = m->wh;
+
+	for(i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next)) {
+		if((i % 2 && nh / 2 > 2 * c->bw)
+				|| (!(i % 2) && nw / 2 > 2 * c->bw)) {
+			if(i < n - 1) {
+				if(i % 2)
+					nh /= 2;
+				else
+					nw /= 2;
+				if((i % 4) == 2 && !s)
+					nx += nw;
+				else if((i % 4) == 3 && !s)
+					ny += nh;
+			}
+			if((i % 4) == 0) {
+				if(s)
+					ny += nh;
+				else
+					ny -= nh;
+			} else if((i % 4) == 1) {
+				nx += nw;
+			} else if((i % 4) == 2) {
+				ny += nh;
+			} else if((i % 4) == 3) {
+				if(s)
+					nx += nw;
+				else
+					nx -= nw;
+			}
+			if(i == 0) {
+				if(n != 1)
+					nw = m->ww * m->mfact;
+				ny = m->wy;
+			} else if(i == 1) {
+				nw = m->ww - nw;
+			}
+			i++;
+		}
+		resize(c, nx, ny, nw - 2 * c->bw, nh - 2 * c->bw, False);
+	}
+}
+
+void
+dwindle(Monitor *m)
+{ fibonacci(m, 1); }
+
+void
+spiral(Monitor *m)
+{ fibonacci(m, 0); }
