@@ -206,6 +206,7 @@ static void setup(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
+static void sigquit(int s);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -1638,6 +1639,13 @@ sigchld(int unused)
 }
 
 void
+sigquit(int s)
+{
+	quit(NULL);
+	(void) s;
+}
+
+void
 spawn(const Arg *arg)
 {
 	if (arg->v == dmenucmd)
@@ -2145,6 +2153,8 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
+	signal(SIGTERM, sigquit);
+	signal(SIGINT, sigquit);
 	run();
 	cleanup();
 	XCloseDisplay(dpy);
