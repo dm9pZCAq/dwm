@@ -1338,6 +1338,14 @@ resizeclient(Client *c, int x, int y, int w, int h)
 		}
 	}
 
+	if (((nexttiled(c->mon->clients) == c && !nexttiled(c->next))
+			|| &monocle == c->mon->lt[c->mon->sellt]->arrange)
+			&& !c->isfullscreen && !c->isfloating) {
+		c->w = wc.width += c->bw * 2;
+		c->h = wc.height += c->bw * 2;
+		wc.border_width = 0;
+	}
+
 	c->oldx = c->x; c->x = wc.x = x + gapoffset;
 	c->oldy = c->y; c->y = wc.y = y + gapoffset;
 	c->oldw = c->w; c->w = wc.width = w - gapincr;
